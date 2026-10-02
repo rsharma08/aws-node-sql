@@ -1,0 +1,16 @@
+{
+  "name": "aws-node-sql",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "test": "node --check index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1145.0",
+    "mssql": "^12.7.2"
+  }
+}

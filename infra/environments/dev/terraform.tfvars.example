@@ -1,0 +1,6 @@
+github_repository = "rsharma08/aws-node-sql"
+lambda_zip = "C:/Users/raman/Documents/JOBs/Assessment/Solirius/dist/api.zip"
+# Select an orderable SQL Server 2019 Web version using the README command.
+# db_engine_version = "EXACT_ORDERABLE_VERSION"
+# Existing accounts with a GitHub OIDC provider must provide its ARN:
+# oidc_provider_arn = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
