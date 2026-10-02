@@ -1,0 +1,110 @@
+name: API CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check syntax
+        run: |
+          node --check index.js
+          node --check db.js
+          node --check bootstrap/index.js
+
+      - name: Check API responses
+        shell: bash
+        run: |
+          node <<'NODE'
+          const assert = require("node:assert/strict");
+          const { handler } = require("./index");
+
+          async function check() {
+            const event = (rawPath) => ({
+              rawPath,
+              requestContext: { http: { method: "GET" } }
+            });
+
+            const healthy = await handler(event("/health"));
+            assert.equal(healthy.statusCode, 200);
+            assert.equal(JSON.parse(healthy.body).status, "ok");
+
+            const missing = await handler(event("/missing"));
+            assert.equal(missing.statusCode, 404);
+          }
+
+          check().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
+
+      - name: Package API
+        run: |
+          npm prune --omit=dev
+          test -s certs/global-bundle.pem
+          mkdir -p dist
+          zip -qr dist/api.zip \
+            index.js db.js package.json node_modules certs
+
+      - name: Configure AWS credentials
+        if: >-
+          github.ref == 'refs/heads/main' &&
+          github.event_name != 'pull_request' &&
+          vars.AWS_DEPLOY_ENABLED == 'true'
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-west-2
+          role-session-name: github-api-${{ github.run_id }}
+
+      - name: Deploy API
+        if: >-
+          github.ref == 'refs/heads/main' &&
+          github.event_name != 'pull_request' &&
+          vars.AWS_DEPLOY_ENABLED == 'true'
+        env:
+          FUNCTION_NAME: ${{ vars.API_FUNCTION_NAME }}
+        run: |
+          test -n "$FUNCTION_NAME"
+          aws lambda update-function-code \
+            --function-name "$FUNCTION_NAME" \
+            --zip-file fileb://dist/api.zip \
+            --query LastModified \
+            --output text
+
+          aws lambda wait function-updated-v2 \
+            --function-name "$FUNCTION_NAME"
+
+    environment: dev
+
+    permissions:
+      contents: read
+      id-token: write
