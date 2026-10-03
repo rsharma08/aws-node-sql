@@ -1,26 +1,26 @@
 module "network" {
   source = "../../modules/network"
 
-  name   = "solirius-dev"
-  region = "eu-west-2"
+  name   = local.name
+  region = var.aws_region
 }
 
 module "database" {
   source = "../../modules/database"
 
-  name              = "solirius-dev"
+  name              = local.name
   subnet_ids        = module.network.subnet_ids
   security_group_id = module.network.db_security_group_id
 
   engine_version   = var.db_engine_version
-  instance_class   = "db.t3.medium"
-  parameter_family = "sqlserver-web-15.0"
+  instance_class   = var.db_instance_class
+  parameter_family = var.db_parameter_family
 }
 
 module "api" {
   source = "../../modules/api"
 
-  name              = "solirius-dev"
+  name              = local.name
   zip_path          = abspath("${path.root}/../../../dist/api.zip")
   subnet_ids        = module.network.subnet_ids
   security_group_id = module.network.lambda_security_group_id
@@ -32,7 +32,7 @@ module "api" {
 module "bootstrap" {
   source = "../../modules/bootstrap"
 
-  name     = "solirius-dev"
+  name     = local.name
   zip_path = abspath("${path.root}/../../../dist/bootstrap.zip")
 
   subnet_ids        = module.network.subnet_ids
@@ -46,9 +46,14 @@ module "bootstrap" {
 module "delivery" {
   source = "../../modules/delivery"
 
-  name               = "solirius-dev"
-  github_repository  = "rsharma08/aws-node-sql"
-  github_environment = "dev"
+  name               = local.name
+  github_repository  = var.github_repository
+  github_environment = var.github_environment
+  oidc_provider_arn  = var.oidc_provider_arn
 
   function_arn = module.api.function_arn
+}
+
+locals {
+  name = "${var.project}-${var.environment}"
 }
