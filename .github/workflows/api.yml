@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   build:
+    name: Test and package
     runs-on: ubuntu-24.04
     timeout-minutes: 10
 
@@ -39,25 +40,29 @@ jobs:
           node --check db.js
           node --check bootstrap/index.js
 
-      - name: Check API responses
-        shell: bash
+      - name: Test API responses
         run: |
           node <<'NODE'
           const assert = require("node:assert/strict");
           const { handler } = require("./index");
 
           async function check() {
-            const event = (rawPath) => ({
-              rawPath,
-              requestContext: { http: { method: "GET" } }
-            });
+            for (const [method, rawPath, expected] of [
+              ["GET", "/health", 200],
+              ["GET", "/missing", 404],
+              ["POST", "/health", 404]
+            ]) {
+              const result = await handler({
+                rawPath,
+                requestContext: { http: { method } }
+              });
 
-            const healthy = await handler(event("/health"));
-            assert.equal(healthy.statusCode, 200);
-            assert.equal(JSON.parse(healthy.body).status, "ok");
+              assert.equal(result.statusCode, expected);
 
-            const missing = await handler(event("/missing"));
-            assert.equal(missing.statusCode, 404);
+              if (rawPath === "/health" && method === "GET") {
+                assert.equal(JSON.parse(result.body).status, "ok");
+              }
+            }
           }
 
           check().catch((error) => {
@@ -66,34 +71,76 @@ jobs:
           });
           NODE
 
-      - name: Package API
+      - name: Verify packaging
         run: |
           npm prune --omit=dev
           test -s certs/global-bundle.pem
           mkdir -p dist
           zip -qr dist/api.zip \
             index.js db.js package.json node_modules certs
+          unzip -t dist/api.zip
+
+  deploy:
+    name: Deploy API
+    needs: build
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event_name != 'pull_request' &&
+      vars.AWS_DEPLOY_ENABLED == 'true'
+
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: dev
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+
+      - name: Build deployment package
+        run: |
+          npm ci --omit=dev
+          test -s certs/global-bundle.pem
+          mkdir -p dist
+          zip -qr dist/api.zip \
+            index.js db.js package.json node_modules certs
+
+      - name: Check deployment settings
+        env:
+          ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          FUNCTION_NAME: ${{ vars.API_FUNCTION_NAME }}
+        run: |
+          test -n "$ROLE_ARN" || {
+            echo "Missing AWS_DEPLOY_ROLE_ARN"
+            exit 1
+          }
+          test -n "$FUNCTION_NAME" || {
+            echo "Missing API_FUNCTION_NAME"
+            exit 1
+          }
 
       - name: Configure AWS credentials
-        if: >-
-          github.ref == 'refs/heads/main' &&
-          github.event_name != 'pull_request' &&
-          vars.AWS_DEPLOY_ENABLED == 'true'
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: eu-west-2
           role-session-name: github-api-${{ github.run_id }}
+          role-duration-seconds: 900
 
-      - name: Deploy API
-        if: >-
-          github.ref == 'refs/heads/main' &&
-          github.event_name != 'pull_request' &&
-          vars.AWS_DEPLOY_ENABLED == 'true'
+      - name: Update API code
         env:
           FUNCTION_NAME: ${{ vars.API_FUNCTION_NAME }}
         run: |
-          test -n "$FUNCTION_NAME"
           aws lambda update-function-code \
             --function-name "$FUNCTION_NAME" \
             --zip-file fileb://dist/api.zip \
@@ -102,9 +149,3 @@ jobs:
 
           aws lambda wait function-updated-v2 \
             --function-name "$FUNCTION_NAME"
-
-    environment: dev
-
-    permissions:
-      contents: read
-      id-token: write
