@@ -90,7 +90,7 @@ jobs:
 
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    environment: dev
+    environment: ${{ vars.GITHUB_DEPLOY_ENVIRONMENT || 'dev' }}
 
     permissions:
       contents: read
@@ -119,7 +119,12 @@ jobs:
         env:
           ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           FUNCTION_NAME: ${{ vars.API_FUNCTION_NAME }}
+          DEPLOY_REGION: ${{ vars.AWS_REGION }}
         run: |
+          test -n "$DEPLOY_REGION" || {
+            echo "Missing AWS_REGION"
+            exit 1
+          }
           test -n "$ROLE_ARN" || {
             echo "Missing AWS_DEPLOY_ROLE_ARN"
             exit 1
@@ -133,7 +138,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: eu-west-2
+          aws-region: ${{ vars.AWS_REGION }}
           role-session-name: github-api-${{ github.run_id }}
           role-duration-seconds: 900
 

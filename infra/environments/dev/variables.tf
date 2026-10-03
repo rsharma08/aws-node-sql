@@ -32,3 +32,19 @@ variable "db_parameter_family" {
   default     = "sqlserver-web-15.0"
   description = "Must match the selected engine major version."
 }
+variable "github_repository" {
+  type        = string
+  description = "GitHub owner/repository used for API deployments."
+}
+
+variable "github_environment" {
+  type        = string
+  default     = "dev"
+  description = "GitHub environment used by the deployment workflow."
+}
+
+variable "oidc_provider_arn" {
+  type        = string
+  default     = null
+  description = "Existing GitHub OIDC provider ARN; null creates one."
+}

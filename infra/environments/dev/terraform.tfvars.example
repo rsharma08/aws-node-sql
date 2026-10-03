@@ -1,6 +1,14 @@
-github_repository = "rsharma08/aws-node-sql"
-lambda_zip = "C:/Users/raman/Documents/JOBs/Assessment/Solirius/dist/api.zip"
-# Select an orderable SQL Server 2019 Web version using the README command.
-# db_engine_version = "EXACT_ORDERABLE_VERSION"
-# Existing accounts with a GitHub OIDC provider must provide its ARN:
-# oidc_provider_arn = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+aws_region  = "eu-west-2"
+project     = "solirius"
+environment = "dev"
+
+db_instance_class   = "db.t3.medium"
+db_engine_version   = "15.00.4480.2.v1"
+db_parameter_family = "sqlserver-web-15.0"
+
+# Setting repository running GitHub Actions.
+github_repository  = "rsharma08/aws-node-sql"
+github_environment = "dev"
+
+# If the target account already has a GitHub OIDC provider:
+# oidc_provider_arn = "arn:aws:iam::TARGET_ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
