@@ -90,7 +90,7 @@ jobs:
 
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    environment: ${{ vars.GITHUB_DEPLOY_ENVIRONMENT || 'dev' }}
+    environment: ${{ vars.DEPLOY_ENVIRONMENT || 'dev' }}
 
     permissions:
       contents: read
@@ -114,6 +114,7 @@ jobs:
           mkdir -p dist
           zip -qr dist/api.zip \
             index.js db.js package.json node_modules certs
+          unzip -t dist/api.zip
 
       - name: Check deployment settings
         env:
@@ -125,20 +126,64 @@ jobs:
             echo "Missing AWS_REGION"
             exit 1
           }
+
           test -n "$ROLE_ARN" || {
             echo "Missing AWS_DEPLOY_ROLE_ARN"
             exit 1
           }
+
           test -n "$FUNCTION_NAME" || {
             echo "Missing API_FUNCTION_NAME"
             exit 1
           }
+
+      - name: Check OIDC identity
+        shell: bash
+        run: |
+          node <<'NODE'
+          async function main() {
+            const url = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
+            url.searchParams.set("audience", "sts.amazonaws.com");
+
+            const response = await fetch(url, {
+              headers: {
+                Authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`
+              }
+            });
+
+            if (!response.ok) {
+              throw new Error(`OIDC request failed: ${response.status}`);
+            }
+
+            const { value } = await response.json();
+
+            if (typeof value !== "string" || value.split(".").length !== 3) {
+              throw new Error("Invalid OIDC response");
+            }
+
+            const claims = JSON.parse(
+              Buffer.from(value.split(".")[1], "base64url").toString("utf8")
+            );
+
+            console.log(JSON.stringify({
+              iss: claims.iss,
+              aud: claims.aud,
+              sub: claims.sub
+            }, null, 2));
+          }
+
+          main().catch(() => {
+            console.error("Unable to inspect OIDC identity");
+            process.exit(1);
+          });
+          NODE
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
+          audience: sts.amazonaws.com
           role-session-name: github-api-${{ github.run_id }}
           role-duration-seconds: 900
 
