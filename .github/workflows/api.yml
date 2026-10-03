@@ -90,7 +90,7 @@ jobs:
 
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    environment: ${{ vars.GITHUB_DEPLOY_ENVIRONMENT || 'dev' }}
+    environment: ${{ vars.DEPLOY_ENVIRONMENT || 'dev' }}
 
     permissions:
       contents: read
