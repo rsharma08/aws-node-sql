@@ -18,23 +18,6 @@ variable "environment" {
     error_message = "Use dev, staging or production."
   }
 }
-# variable "lambda_zip" {
-#   type        = string
-#   description = "Absolute path to the real API deployment ZIP; index.js must export handler."
-# }
-# variable "github_repository" {
-#   type        = string
-#   description = "GitHub owner/repository, for example rsharma08/aws-node-sql."
-#   validation {
-#     condition     = can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", var.github_repository))
-#     error_message = "Use owner/repository."
-#   }
-# }
-# variable "oidc_provider_arn" {
-#   type        = string
-#   default     = null
-#   description = "Existing GitHub OIDC provider ARN; null creates it. Only one per AWS account."
-# }
 variable "db_instance_class" {
   type    = string
   default = "db.t3.medium"
