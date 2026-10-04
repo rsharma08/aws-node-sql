@@ -46,10 +46,11 @@ module "bootstrap" {
 module "delivery" {
   source = "../../modules/delivery"
 
-  name               = local.name
-  github_repository  = var.github_repository
-  github_environment = var.github_environment
-  oidc_provider_arn  = var.oidc_provider_arn
+  name                = local.name
+  github_repository   = var.github_repository
+  github_environment  = var.github_environment
+  oidc_provider_arn   = var.oidc_provider_arn
+  github_oidc_subject = var.github_oidc_subject
 
   function_arn = module.api.function_arn
 }

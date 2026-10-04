@@ -34,6 +34,7 @@ variable "db_parameter_family" {
 }
 variable "github_repository" {
   type        = string
+  default     = "rsharma08/aws-node-sql"
   description = "GitHub owner/repository used for API deployments."
 }
 
@@ -47,4 +48,8 @@ variable "oidc_provider_arn" {
   type        = string
   default     = null
   description = "Existing GitHub OIDC provider ARN; null creates one."
+}
+variable "github_oidc_subject" {
+  description = "Exact GitHub OIDC subject allowed to deploy"
+  type        = string
 }

@@ -21,3 +21,8 @@ variable "oidc_provider_arn" {
   default     = null
   description = "Existing GitHub OIDC provider ARN; null creates one."
 }
+
+variable "github_oidc_subject" {
+  description = "Exact GitHub OIDC subject allowed to deploy"
+  type        = string
+}
