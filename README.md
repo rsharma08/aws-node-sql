@@ -12,7 +12,7 @@ Database passwords stay in Secrets Manager.
 
 ## AWS permissions
 
-See [IAM permissions](docs/iam-permissions.md) for provisioning,
+See [IAM permissions](docs/permissions.md) for provisioning,
 cleanup, bootstrap and authenticated API-testing policies.
 
 ## Deploy
