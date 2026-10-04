@@ -14,7 +14,14 @@ Database passwords stay in Secrets Manager.
 
 1. Clone or fork the repository.
 2. Copy `infra/environments/dev/terraform.tfvars.example` to `terraform.tfvars`. Set your region, project, repository, environment and exact GitHub OIDC subject.
-3. Install dependencies and create both deployment packages using the supplied scripts. Confirm `dist/api.zip` and `dist/bootstrap.zip` exist.
+3. From the repository root, run powershell scripts:
+
+   ``
+   .\scripts\package.ps1
+   ```
+
+   Requires Node.js 24, npm, zip and unzip. This creates both Lambda
+   packages with their handlers, dependencies and TLS certificate bundle.
 4. Provision from `infra/environments/dev`:
 
    ```powershell

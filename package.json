@@ -12,5 +12,8 @@
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.1145.0",
     "mssql": "^12.7.2"
+  },
+  "devDependencies": {
+    "fflate": "0.8.2"
   }
 }
