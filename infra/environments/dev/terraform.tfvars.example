@@ -10,7 +10,8 @@ github_repository  = "rsharma08/aws-node-sql"
 github_environment = "dev"
 
 
-github_oidc_subject = "------------"
+# Replace with the exact "sub" from the workflow's Check OIDC identity step.
+github_oidc_subject = "REPLACE_WITH_OIDC_SUBJECT"
 
 # Existing  GitHub OIDC provider:
 # oidc_provider_arn = "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"

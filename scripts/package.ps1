@@ -1,3 +1,4 @@
+$ErrorActionPreference = 'Stop'
 npm.cmd ci --omit=dev
 if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed" }
 

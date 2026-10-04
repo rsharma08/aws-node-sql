@@ -7,21 +7,26 @@ Database passwords stay in Secrets Manager.
 ## What you need
 
 - Terraform >= 1.10 and < 2.0, Node.js 24, AWS CLI v2 and Git.
-- AWS credentials for a provisioning role with the permissions listed in the IAM policy section.
+- AWS credentials for a provisioning role with the required permissions.
 - Your own GitHub repository if you want to test CI/CD.
+
+## AWS permissions
+
+See [IAM permissions](docs/iam-permissions.md) for provisioning,
+cleanup, bootstrap and authenticated API-testing policies.
 
 ## Deploy
 
 1. Clone or fork the repository.
 2. Copy `infra/environments/dev/terraform.tfvars.example` to `terraform.tfvars`. Set your region, project, repository, environment and exact GitHub OIDC subject.
-3. From the repository root, run powershell scripts:
+3. From the repository root, run in PowerShell:
 
-   ``
+   ```powershell
    .\scripts\package.ps1
    ```
 
-   Requires Node.js 24, npm, zip and unzip. This creates both Lambda
-   packages with their handlers, dependencies and TLS certificate bundle.
+   Requires Windows PowerShell, Node.js 24 and npm.
+   Creates both Lambda ZIPs with dependencies and certificates.
 4. Provision from `infra/environments/dev`:
 
    ```powershell
