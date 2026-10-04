@@ -448,5 +448,3 @@ Keep provisioning permissions until Terraform destroy finishes.
 - The application secret has a recovery window, which can block immediate
   recreation using the same name.
 - Keep Terraform state until cleanup is confirmed.
-
-No S3 state-backend permissions are needed for this project's local-state setup.
