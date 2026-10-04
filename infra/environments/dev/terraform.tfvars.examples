@@ -1,0 +1,16 @@
+aws_region          = "eu-west-2"
+environment         = "dev"
+project             = "solirius-rebuild"
+db_instance_class   = "db.t3.medium"
+db_engine_version   = "15.00.4480.2.v1"
+db_parameter_family = "sqlserver-web-15.0"
+
+# Setting repository running GitHub Actions.
+github_repository  = "rsharma08/aws-node-sql"
+github_environment = "dev"
+
+
+github_oidc_subject = "repo:rsharma08@16964997/aws-node-sql@1401490937:environment:dev"
+
+# Existing  GitHub OIDC provider:
+# oidc_provider_arn = "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"

@@ -28,7 +28,7 @@ resource "aws_iam_role" "deploy" {
       Condition = {
         StringEquals = {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          "token.actions.githubusercontent.com:sub" = "repo:rsharma08@16964997/aws-node-sql@1401490937:environment:dev"
+          "token.actions.githubusercontent.com:sub" = var.github_oidc_subject
         }
       }
     }]
@@ -44,9 +44,9 @@ resource "aws_iam_role_policy" "deploy" {
     Statement = [{
       Effect = "Allow"
       Action = [
-      "lambda:UpdateFunctionCode",
-      "lambda:GetFunction",
-      "lambda:GetFunctionConfiguration"
+        "lambda:UpdateFunctionCode",
+        "lambda:GetFunction",
+        "lambda:GetFunctionConfiguration"
       ]
       Resource = var.function_arn
     }]
