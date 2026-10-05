@@ -41,7 +41,7 @@ variable "github_repository" {
 variable "github_environment" {
   type        = string
   default     = "dev"
-  description = "GitHub environment used by the deployment workflow."
+  description = "GitHub environment used by the deployment."
 }
 
 variable "oidc_provider_arn" {

@@ -39,7 +39,7 @@ exports.handler = async (event) => {
         database: "ok"
       });
     } catch {
-      console.error("Database health check failed", {
+      console.error("Database health check error", {
         requestId: event?.requestContext?.requestId
       });
 
