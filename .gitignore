@@ -10,3 +10,4 @@ distbackup/
 .env
 .env.*
 !.env.example
+bootstrap-result.json

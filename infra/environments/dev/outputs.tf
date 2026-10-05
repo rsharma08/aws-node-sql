@@ -40,3 +40,6 @@ output "github_deploy_role_arn" {
 output "api_function_name" {
   value = module.api.function_name
 }
+output "aws_region" {
+  value = var.aws_region
+}

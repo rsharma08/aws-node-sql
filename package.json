@@ -2,10 +2,10 @@
   "name": "aws-node-sql",
   "version": "1.0.0",
   "private": true,
-  "main": "index.js",
-  "scripts": {
-    "test": "node --check index.js"
-  },
+  "main": "app/index.js",
+"scripts": {
+  "test": "node --check app/index.js && node --check app/db.js && node --check bootstrap/index.js"
+},
   "engines": {
     "node": ">=20"
   },
