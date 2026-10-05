@@ -15,31 +15,47 @@ Database passwords stay in Secrets Manager.
 See [IAM permissions](docs/permissions.md) for provisioning,
 cleanup, bootstrap and authenticated API-testing policies.
 
-## Deploy
+
+## Deployment Steps
 
 1. Clone or fork the repository.
-2. Copy `infra/environments/dev/terraform.tfvars.example` to `terraform.tfvars`. Set your region, project, repository, environment and exact GitHub OIDC subject.
-3. From the repository root, run in PowerShell:
+
+2. From the repository root, copy the configuration:
+
+   ```powershell
+   Copy-Item infra/environments/dev/terraform.tfvars.example `
+     infra/environments/dev/terraform.tfvars
+   ```
+
+   Set your region, project, repository, environment and exact GitHub
+   OIDC subject. Never commit this file.
+
+3. Create both Lambda packages:
 
    ```powershell
    .\scripts\package.ps1
    ```
 
    Requires Windows PowerShell, Node.js 24 and npm.
-   Creates both Lambda ZIPs with dependencies and certificates.
-4. Provision from `infra/environments/dev`:
+
+4. Provision the infrastructure:
 
    ```powershell
+   Set-Location infra/environments/dev
+
    terraform init
    terraform validate
-   terraform plan
-   terraform apply
+   terraform plan "-out=deployment.tfplan"
+   terraform show deployment.tfplan
+   terraform apply deployment.tfplan
    ```
 
+   Review the plan before applying. Applying the saved plan starts
+   provisioning immediately.
 
 ## Initialise the database
 
-From the same Terraform directory:
+After Terraform apply succeeds, run from the same directory:
 
 ```powershell
 $function = terraform output -raw bootstrap_function_name
@@ -52,15 +68,20 @@ aws lambda invoke `
 Get-Content bootstrap-result.json
 ```
 
-Check that the invocation has no `FunctionError` and the result reports `status: ok`.
+Check that the invocation has no `FunctionError` and the result reports
+`status: ok`.
 
-The bootstrap Lambda reads the RDS-managed admin secret, creates `application_db`, creates or updates the restricted `api_user`, and stores its credentials in Secrets Manager. The API uses this application login, not the administrator account.
+Bootstrap reads the RDS-managed admin secret, creates `application_db`
+and the restricted `api_user`, and stores application credentials in
+Secrets Manager. The API uses this application login rather than the
+administrator account.
+
 
 ## Test
 
 Get the endpoint URLs:
 
-```powershell
+```
 terraform output -raw health_url
 terraform output -raw database_health_url
 ```

@@ -35,8 +35,8 @@ resource "aws_db_instance" "this" {
   copy_tags_to_snapshot           = true
   enabled_cloudwatch_logs_exports = ["error"]
   deletion_protection             = true
-  skip_final_snapshot             = false
-  final_snapshot_identifier       = "${var.name}-final"
+  skip_final_snapshot             = true
+  final_snapshot_identifier = "${var.name}-final-snapshot"
   multi_az                        = false
   apply_immediately               = false
   # Web supports the requested small class, but not native Multi-AZ.
