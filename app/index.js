@@ -16,7 +16,10 @@ exports.handler = async (event) => {
   const route = event?.rawPath;
 
   if (method === "GET" && route === "/health") {
-    return response(200, { status: "ok" });
+    return response(200, {
+      status: "ok",
+      version: "assessment-v2"
+    });
   }
 
   if (method === "GET" && route === "/health/db") {
@@ -31,7 +34,10 @@ exports.handler = async (event) => {
         }
       });
 
-      return response(200, { status: "ok", database: "ok" });
+      return response(200, {
+        status: "ok",
+        database: "ok"
+      });
     } catch {
       console.error("Database health check failed", {
         requestId: event?.requestContext?.requestId
@@ -43,5 +49,7 @@ exports.handler = async (event) => {
     }
   }
 
-  return response(404, { message: "Not found" });
+  return response(404, {
+    message: "Not found"
+  });
 };

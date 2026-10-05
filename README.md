@@ -89,7 +89,12 @@ terraform output -raw database_health_url
 Both routes require IAM authentication. Use SigV4-signed GET requests with a role allowed to perform `execute-api:Invoke` on the output route ARNs. Opening the URLs directly in a browser normally returns 403.
 
 Test scripts are stored in Scripts folder
+Test Locally:  
+```
+node --check app/index.js
 
+node -e "require('./app/index').handler({rawPath:'/health',requestContext:{http:{method:'GET'}}}).then(r=>console.log(r.body)).catch(e=>{console.error(e);process.exit(1)})"
+```
 Expected responses:
 
 - `/health`: HTTP 200, `{"status":"ok"}`
