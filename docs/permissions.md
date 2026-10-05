@@ -291,9 +291,6 @@ The provisioning role does not need access to database secret values.
 Manages the stack's IAM roles and inline policies. PassRole is restricted to
 the API and bootstrap execution roles and the Lambda service.
 
-If the account already has a GitHub OIDC provider, set `oidc_provider_arn`
-to reuse it. Do not let this stack destroy a provider shared by other projects.
-For a reused provider, remove its mutation permissions below if unnecessary.
 
 ```json
 {
@@ -431,16 +428,13 @@ Its code-deployment policy allows only these actions on the API Lambda ARN:
 
 `GetFunction` is needed by the workflow's update waiter.
 
-The role's OIDC trust must match your repository's exact token subject.
-Set `github_oidc_subject` using the `sub` printed by the workflow's
-Check OIDC identity step. Repository IDs may be included in that subject.
 
 ## Cleanup
 
 Keep provisioning permissions until Terraform destroy finishes.
 
 - Disable RDS deletion protection and apply that change before destroying.
-- Review the destroy plan, particularly deletion of any OIDC provider.
+- Review the destroy plan.
 - ENI cleanup requires `ec2:DeleteNetworkInterface`.
 - The current assessment configuration skips the final database snapshot.
 - The application secret has a recovery window, which can block immediate
