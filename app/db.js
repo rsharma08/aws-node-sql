@@ -8,7 +8,7 @@ const {
 
 const secrets = new SecretsManagerClient({});
 const ca = fs.readFileSync(
-  path.join(__dirname, "certs", "global-bundle.pem")
+  path.join(__dirname, "..", "certs", "global-bundle.pem")
 );
 
 async function withDatabase(callback) {

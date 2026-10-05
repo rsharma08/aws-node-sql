@@ -36,22 +36,24 @@ jobs:
 
       - name: Check syntax
         run: |
-          node --check index.js
-          node --check db.js
+          node --check app/index.js
+          node --check app/db.js
           node --check bootstrap/index.js
 
       - name: Test API responses
         run: |
           node <<'NODE'
           const assert = require("node:assert/strict");
-          const { handler } = require("./index");
+          const { handler } = require("./app/index");
 
-          async function check() {
-            for (const [method, rawPath, expected] of [
+          async function test() {
+            const cases = [
               ["GET", "/health", 200],
               ["GET", "/missing", 404],
               ["POST", "/health", 404]
-            ]) {
+            ];
+
+            for (const [method, rawPath, expected] of cases) {
               const result = await handler({
                 rawPath,
                 requestContext: { http: { method } }
@@ -59,25 +61,27 @@ jobs:
 
               assert.equal(result.statusCode, expected);
 
-              if (rawPath === "/health" && method === "GET") {
+              if (expected === 200) {
                 assert.equal(JSON.parse(result.body).status, "ok");
               }
             }
+
+            console.log("API tests passed");
           }
 
-          check().catch((error) => {
+          test().catch(error => {
             console.error(error);
             process.exit(1);
           });
           NODE
 
-      - name: Verify packaging
+      - name: Check deployment package
         run: |
           npm prune --omit=dev
           test -s certs/global-bundle.pem
           mkdir -p dist
           zip -qr dist/api.zip \
-            index.js db.js package.json node_modules certs
+            app package.json node_modules certs
           unzip -t dist/api.zip
 
   deploy:
@@ -113,72 +117,20 @@ jobs:
           test -s certs/global-bundle.pem
           mkdir -p dist
           zip -qr dist/api.zip \
-            index.js db.js package.json node_modules certs
+            app package.json node_modules certs
           unzip -t dist/api.zip
 
       - name: Check deployment settings
         env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
           ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           FUNCTION_NAME: ${{ vars.API_FUNCTION_NAME }}
-          DEPLOY_REGION: ${{ vars.AWS_REGION }}
         run: |
-          test -n "$DEPLOY_REGION" || {
-            echo "Missing AWS_REGION"
-            exit 1
-          }
+          : "${AWS_REGION:?Set AWS_REGION}"
+          : "${ROLE_ARN:?Set AWS_DEPLOY_ROLE_ARN}"
+          : "${FUNCTION_NAME:?Set API_FUNCTION_NAME}"
 
-          test -n "$ROLE_ARN" || {
-            echo "Missing AWS_DEPLOY_ROLE_ARN"
-            exit 1
-          }
-
-          test -n "$FUNCTION_NAME" || {
-            echo "Missing API_FUNCTION_NAME"
-            exit 1
-          }
-
-      - name: Check OIDC identity
-        shell: bash
-        run: |
-          node <<'NODE'
-          async function main() {
-            const url = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
-            url.searchParams.set("audience", "sts.amazonaws.com");
-
-            const response = await fetch(url, {
-              headers: {
-                Authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`
-              }
-            });
-
-            if (!response.ok) {
-              throw new Error(`OIDC request failed: ${response.status}`);
-            }
-
-            const { value } = await response.json();
-
-            if (typeof value !== "string" || value.split(".").length !== 3) {
-              throw new Error("Invalid OIDC response");
-            }
-
-            const claims = JSON.parse(
-              Buffer.from(value.split(".")[1], "base64url").toString("utf8")
-            );
-
-            console.log(JSON.stringify({
-              iss: claims.iss,
-              aud: claims.aud,
-              sub: claims.sub
-            }, null, 2));
-          }
-
-          main().catch(() => {
-            console.error("Unable to inspect OIDC identity");
-            process.exit(1);
-          });
-          NODE
-
-      - name: Configure AWS credentials
+      - name: Sign in to AWS
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
@@ -187,7 +139,7 @@ jobs:
           role-session-name: github-api-${{ github.run_id }}
           role-duration-seconds: 900
 
-      - name: Update API code
+      - name: Deploy API
         env:
           FUNCTION_NAME: ${{ vars.API_FUNCTION_NAME }}
         run: |

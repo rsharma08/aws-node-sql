@@ -61,7 +61,7 @@ resource "aws_lambda_function" "this" {
   role          = aws_iam_role.this.arn
 
   runtime = "nodejs24.x"
-  handler = "index.handler"
+  handler = "app/index.handler"
 
   filename         = var.zip_path
   source_code_hash = filebase64sha256(var.zip_path)

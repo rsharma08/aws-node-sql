@@ -1,8 +1,11 @@
 $ErrorActionPreference = 'Stop'
+$repositoryRoot = Split-Path $PSScriptRoot -Parent
+Push-Location $repositoryRoot
+try {
 npm.cmd ci --omit=dev
 if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed" }
 
-foreach ($file in @("index.js", "db.js", "bootstrap/index.js")) {
+foreach ($file in @("app/index.js", "app/db.js", "bootstrap/index.js")) {
     node --check $file
     if ($LASTEXITCODE -ne 0) { throw "Syntax check failed: $file" }
 }
@@ -14,7 +17,7 @@ if (!(Test-Path certs\global-bundle.pem)) {
 New-Item -ItemType Directory -Path dist -Force | Out-Null
 
 Compress-Archive `
-    -Path index.js, db.js, package.json, node_modules, certs `
+    -Path app, package.json, node_modules, certs `
     -DestinationPath dist\api.zip `
     -Force
 
@@ -40,3 +43,7 @@ finally {
 
 Get-Item dist\api.zip, dist\bootstrap.zip |
     Select-Object Name, Length
+}
+finally {
+    Pop-Location
+}
