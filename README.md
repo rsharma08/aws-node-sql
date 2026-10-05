@@ -115,7 +115,7 @@ Environment variables:
 - `AWS_DEPLOY_ROLE_ARN`: Terraform's `github_deploy_role_arn`
 - `API_FUNCTION_NAME`: Terraform's `api_function_name`
 
-Run **API CI/CD** on `main`. If OIDC authentication fails, copy the exact `sub` from **Check OIDC identity** into `github_oidc_subject`, apply Terraform and retry. Subject formats can include repository IDs.
+Run **API CI/CD** on `main`
 
 The pipeline updates the existing API Lambda; it does not provision infrastructure.
 

@@ -442,9 +442,7 @@ Keep provisioning permissions until Terraform destroy finishes.
 - Disable RDS deletion protection and apply that change before destroying.
 - Review the destroy plan, particularly deletion of any OIDC provider.
 - ENI cleanup requires `ec2:DeleteNetworkInterface`.
-- A final database snapshot remains and incurs storage charges.
-- Snapshot deletion is intentionally excluded. Grant
-  `rds:DeleteDBSnapshot` separately if you choose to delete retained snapshots.
+- The current assessment configuration skips the final database snapshot.
 - The application secret has a recovery window, which can block immediate
   recreation using the same name.
 - Keep Terraform state until cleanup is confirmed.
