@@ -1,0 +1,208 @@
+diff --git a/.gitignore b/.gitignore
+index 000037d..c364526 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -9,4 +9,5 @@ distbackup/
+ *.tfplan
+ .env
+ .env.*
+-!.env.example
+\ No newline at end of file
++!.env.example
++bootstrap-result.json
+diff --git a/README.md b/README.md
+index 0764e9f..5be6b0d 100644
+--- a/README.md
++++ b/README.md
+@@ -18,7 +18,7 @@ cleanup, bootstrap and authenticated API-testing policies.
+ ## Deploy
+ 
+ 1. Clone or fork the repository.
+-2. Copy `infra/environments/dev/terraform.tfvars.example` to `terraform.tfvars`. Set your region, project, repository, environment and exact GitHub OIDC subject.
++2. Copy `infra/environments/dev/terraform.tfvars.example` to `infra/environments/dev/terraform.tfvars`. Set your region, project, repository, environment and exact GitHub OIDC subject.
+ 3. From the repository root, run in PowerShell:
+ 
+    ```powershell
+@@ -39,20 +39,13 @@ cleanup, bootstrap and authenticated API-testing policies.
+ 
+ ## Initialise the database
+ 
+-From the same Terraform directory:
++From the repository root:
+ 
+ ```powershell
+-$function = terraform output -raw bootstrap_function_name
+-
+-aws lambda invoke `
+-  --function-name $function `
+-  --cli-read-timeout 150 `
+-  bootstrap-result.json
+-
+-Get-Content bootstrap-result.json
++.\scripts\bootstrap.ps1 -Profile YOUR_AWS_PROFILE
+ ```
+ 
+-Check that the invocation has no `FunctionError` and the result reports `status: ok`.
++The script checks for Lambda errors and a successful result.
+ 
+ The bootstrap Lambda reads the RDS-managed admin secret, creates `application_db`, creates or updates the restricted `api_user`, and stores its credentials in Secrets Manager. The API uses this application login, not the administrator account.
+ 
+@@ -67,7 +60,21 @@ terraform output -raw database_health_url
+ 
+ Both routes require IAM authentication. Use SigV4-signed GET requests with a role allowed to perform `execute-api:Invoke` on the output route ARNs. Opening the URLs directly in a browser normally returns 403.
+ 
+-Test scripts are stored in Scripts folder
++From PowerShell at the repository root:
++
++```powershell
++.\scripts\test-api.ps1 -Profile YOUR_AWS_PROFILE
++```
++
++Or from Git Bash:
++
++```bash
++bash scripts/test-api.sh YOUR_AWS_PROFILE
++```
++
++All operational scripts live in `scripts/`. Application handlers remain in
++`index.js`, `db.js` and `bootstrap/index.js`.
++Keep local Terraform state; it is excluded from Git.
+ 
+ Expected responses:
+ 
+diff --git a/infra/environments/dev/bootstrap-result.json b/infra/environments/dev/bootstrap-result.json
+deleted file mode 100644
+index 14c0267..0000000
+--- a/infra/environments/dev/bootstrap-result.json
++++ /dev/null
+@@ -1 +0,0 @@
+-{"status":"ok","database":"application_db","username":"api_user"}
+\ No newline at end of file
+diff --git a/infra/environments/dev/outputs.tf b/infra/environments/dev/outputs.tf
+index b18c0a9..56fc3a4 100644
+--- a/infra/environments/dev/outputs.tf
++++ b/infra/environments/dev/outputs.tf
+@@ -39,4 +39,7 @@ output "github_deploy_role_arn" {
+ 
+ output "api_function_name" {
+   value = module.api.function_name
+-}
+\ No newline at end of file
++}
++output "aws_region" {
++  value = var.aws_region
++}
+diff --git a/infra/environments/dev/terraform.tfvars.example b/infra/environments/dev/terraform.tfvars.example
+index 40835aa..442a3dc 100644
+--- a/infra/environments/dev/terraform.tfvars.example
++++ b/infra/environments/dev/terraform.tfvars.example
+@@ -1,6 +1,6 @@
+ aws_region          = "eu-west-2"
+ environment         = "dev"
+-project             = "solirius-rebuild"
++project             = "assessment"
+ db_instance_class   = "db.t3.medium"
+ db_engine_version   = "15.00.4480.2.v1"
+ db_parameter_family = "sqlserver-web-15.0"
+diff --git a/scripts/bootstrap.ps1 b/scripts/bootstrap.ps1
+new file mode 100644
+index 0000000..426cfff
+--- /dev/null
++++ b/scripts/bootstrap.ps1
+@@ -0,0 +1,26 @@
++[CmdletBinding()]
++param(
++    [Parameter(Mandatory = $true)]
++    [string]$Profile,
++    [string]$TerraformDirectory = (Join-Path $PSScriptRoot '../infra/environments/dev')
++)
++$ErrorActionPreference = 'Stop'
++$TerraformDirectory = (Resolve-Path $TerraformDirectory).Path
++$function = & terraform "-chdir=$TerraformDirectory" output -raw bootstrap_function_name
++if ($LASTEXITCODE -ne 0 -or !$function) { throw 'Cannot read bootstrap function name' }
++$region = & terraform "-chdir=$TerraformDirectory" output -raw aws_region
++if ($LASTEXITCODE -ne 0 -or !$region) { throw 'Cannot read AWS region' }
++$resultFile = [IO.Path]::GetTempFileName()
++try {
++    $metadata = & aws lambda invoke --profile $Profile --region $region `
++        --function-name $function --cli-read-timeout 150 $resultFile
++    if ($LASTEXITCODE -ne 0) { throw 'Bootstrap invocation failed' }
++    $invocation = ($metadata -join "`n") | ConvertFrom-Json
++    if ($invocation.PSObject.Properties['FunctionError']) { throw 'Bootstrap Lambda reported an error; inspect CloudWatch logs' }
++    $result = Get-Content $resultFile -Raw | ConvertFrom-Json
++    if ($result.status -ne 'ok') { throw 'Unexpected bootstrap result' }
++    $result | ConvertTo-Json -Compress
++}
++finally {
++    Remove-Item $resultFile -Force
++}
+diff --git a/scripts/package.ps1 b/scripts/package.ps1
+index 836fbe6..b2e131e 100644
+--- a/scripts/package.ps1
++++ b/scripts/package.ps1
+@@ -1,4 +1,7 @@
+ $ErrorActionPreference = 'Stop'
++$repositoryRoot = Split-Path $PSScriptRoot -Parent
++Push-Location $repositoryRoot
++try {
+ npm.cmd ci --omit=dev
+ if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed" }
+ 
+@@ -39,4 +42,8 @@ finally {
+ }
+ 
+ Get-Item dist\api.zip, dist\bootstrap.zip |
+-    Select-Object Name, Length
+\ No newline at end of file
++    Select-Object Name, Length
++}
++finally {
++    Pop-Location
++}
+diff --git a/scripts/test-api.ps1 b/scripts/test-api.ps1
+index 82254ae..7af8e73 100644
+--- a/scripts/test-api.ps1
++++ b/scripts/test-api.ps1
+@@ -1,21 +1,38 @@
++[CmdletBinding()]
++param(
++    [Parameter(Mandatory = $true)]
++    [string]$Profile,
++    [string]$TerraformDirectory = (Join-Path $PSScriptRoot '../infra/environments/dev')
++)
++$ErrorActionPreference = 'Stop'
++$TerraformDirectory = (Resolve-Path $TerraformDirectory).Path
++function Get-Output([string]$Name) {
++    $value = & terraform "-chdir=$TerraformDirectory" output -raw $Name
++    if ($LASTEXITCODE -ne 0 -or !$value) { throw "Cannot read Terraform output: $Name" }
++    return ($value -join "`n").Trim()
++}
+ $credentials = $null
+ 
+ try {
+     $credentials = aws configure export-credentials `
+-        --profile solirius-terraform `
++        --profile $Profile `
+         --format process | ConvertFrom-Json
+ 
+     if ($LASTEXITCODE -ne 0 -or !$credentials.AccessKeyId) {
+         throw "Could not obtain AWS credentials"
+     }
+ 
+-    $region = "eu-west-2"
+     $urls = @(
+-        (terraform output -raw health_url),
+-        (terraform output -raw database_health_url)
++        (Get-Output 'health_url'),
++        (Get-Output 'database_health_url')
+     )
+ 
+     foreach ($url in $urls) {
++        $uri = [Uri]$url
++        if ($uri.Scheme -ne 'https' -or $uri.Host -notmatch '^[a-z0-9]+\.execute-api\.([a-z0-9-]+)\.amazonaws\.com$') {
++            throw 'Unexpected API Gateway endpoint'
++        }
++        $region = $Matches[1]
+         Write-Host "`nTesting $url"
+ 
+         curl.exe --silent --show-error --fail-with-body `
