@@ -47,7 +47,7 @@ variable "github_environment" {
 variable "oidc_provider_arn" {
   type        = string
   default     = null
-  description = "Existing GitHub OIDC provider ARN; null creates one."
+  description = "Existing GitHub OIDC provider ARN"
 }
 variable "github_oidc_subject" {
   description = "Exact GitHub OIDC subject allowed to deploy"
